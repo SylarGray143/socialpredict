@@ -27,14 +27,6 @@ type PlaceUnitOfWork interface {
 	PlaceBetTransaction(ctx context.Context, fn PlaceTransactionFunc) error
 }
 
-// SellTransactionFunc runs sale settlement against transaction-bound collaborators.
-type SellTransactionFunc func(ctx context.Context, repo Repository, markets MarketService, users UserService) error
-
-// SellUnitOfWork scopes sale credit and sale-bet writes to one database transaction.
-type SellUnitOfWork interface {
-	SellBetTransaction(ctx context.Context, fn SellTransactionFunc) error
-}
-
 // Repository exposes the persistence layer needed by the bets domain service.
 type Repository interface {
 	BetWriter
@@ -83,16 +75,6 @@ type PlaceValidator interface {
 	Validate(ctx context.Context, req PlaceRequest) (string, error)
 }
 
-// SellValidator allows sell validation rules to be extended without changing the service.
-type SellValidator interface {
-	Validate(ctx context.Context, req SellRequest) (string, error)
-}
-
-// SaleCalculator encapsulates sale pricing and dust rules.
-type SaleCalculator interface {
-	Calculate(pos *dmarkets.UserPosition, sharesOwned int64, creditsRequested int64) (SaleQuote, error)
-}
-
 // FeeCalculator encapsulates buy fee calculations.
 type FeeCalculator interface {
 	Calculate(hasBet bool, amount int64) betFees
@@ -128,7 +110,6 @@ func (serviceClock) Now() time.Time { return time.Now() }
 // ServiceInterface defines the behaviour offered by the bets domain.
 type ServiceInterface interface {
 	Place(ctx context.Context, req PlaceRequest) (*PlacedBet, error)
-	Sell(ctx context.Context, req SellRequest) (*SellResult, error)
 }
 
 // Service implements the bets domain logic.
@@ -140,20 +121,16 @@ type Service struct {
 	clock   Clock
 
 	placeValidator PlaceValidator
-	sellValidator  SellValidator
 
-	marketGate     MarketGate
-	fees           FeeCalculator
-	balances       BalanceGuard
-	ledger         BetLedger
-	saleCalculator SaleCalculator
-	placeUnit      PlaceUnitOfWork
-	sellUnit       SellUnitOfWork
+	marketGate MarketGate
+	fees       FeeCalculator
+	balances   BalanceGuard
+	ledger     BetLedger
+	placeUnit  PlaceUnitOfWork
 }
 
 var (
 	_ ServiceInterface = (*Service)(nil)
-	_ SaleCalculator   = saleCalculator{}
 )
 
 // ServiceOption configures bets Service collaborators.
@@ -165,10 +142,6 @@ func defaultClock() Clock {
 
 func defaultPlaceValidatorStrategy() PlaceValidator {
 	return defaultPlaceValidator{}
-}
-
-func defaultSellValidatorStrategy() SellValidator {
-	return defaultSellValidator{}
 }
 
 func defaultMarketGateStrategy(markets MarketReader, clock Clock) MarketGate {
@@ -187,10 +160,6 @@ func defaultBetLedgerStrategy(repo BetWriter, users TransactionRecorder) BetLedg
 	return betLedger{repo: repo, users: users}
 }
 
-func defaultSaleCalculatorStrategy(config Config) SaleCalculator {
-	return saleCalculator{maxDustPerSale: config.MaxDustPerSale}
-}
-
 func clockOrDefault(clock Clock) Clock {
 	if clock == nil {
 		return defaultClock()
@@ -201,13 +170,6 @@ func clockOrDefault(clock Clock) Clock {
 func placeValidatorOrDefault(v PlaceValidator) PlaceValidator {
 	if v == nil {
 		return defaultPlaceValidatorStrategy()
-	}
-	return v
-}
-
-func sellValidatorOrDefault(v SellValidator) SellValidator {
-	if v == nil {
-		return defaultSellValidatorStrategy()
 	}
 	return v
 }
@@ -240,13 +202,6 @@ func betLedgerOrDefault(l BetLedger, repo BetWriter, users TransactionRecorder) 
 	return l
 }
 
-func saleCalculatorOrDefault(c SaleCalculator, config Config) SaleCalculator {
-	if c == nil {
-		return defaultSaleCalculatorStrategy(config)
-	}
-	return c
-}
-
 func placeUnitOfWorkOrDefault(u PlaceUnitOfWork, repo Repository) PlaceUnitOfWork {
 	if u != nil {
 		return u
@@ -257,30 +212,11 @@ func placeUnitOfWorkOrDefault(u PlaceUnitOfWork, repo Repository) PlaceUnitOfWor
 	return nil
 }
 
-func sellUnitOfWorkOrDefault(u SellUnitOfWork, repo Repository) SellUnitOfWork {
-	if u != nil {
-		return u
-	}
-	if repoUnit, ok := repo.(SellUnitOfWork); ok {
-		return repoUnit
-	}
-	return nil
-}
-
 // WithPlaceValidator overrides the place validator.
 func WithPlaceValidator(v PlaceValidator) ServiceOption {
 	return func(s *Service) {
 		if s != nil {
 			s.placeValidator = placeValidatorOrDefault(v)
-		}
-	}
-}
-
-// WithSellValidator overrides the sell validator.
-func WithSellValidator(v SellValidator) ServiceOption {
-	return func(s *Service) {
-		if s != nil {
-			s.sellValidator = sellValidatorOrDefault(v)
 		}
 	}
 }
@@ -321,29 +257,11 @@ func WithBetLedger(l BetLedger) ServiceOption {
 	}
 }
 
-// WithSaleCalculator overrides the sale calculator.
-func WithSaleCalculator(c SaleCalculator) ServiceOption {
-	return func(s *Service) {
-		if s != nil {
-			s.saleCalculator = saleCalculatorOrDefault(c, s.config)
-		}
-	}
-}
-
 // WithPlaceUnitOfWork overrides the transaction scope used by place-bet writes.
 func WithPlaceUnitOfWork(u PlaceUnitOfWork) ServiceOption {
 	return func(s *Service) {
 		if s != nil {
 			s.placeUnit = placeUnitOfWorkOrDefault(u, s.repo)
-		}
-	}
-}
-
-// WithSellUnitOfWork overrides the transaction scope used by sell-settlement writes.
-func WithSellUnitOfWork(u SellUnitOfWork) ServiceOption {
-	return func(s *Service) {
-		if s != nil {
-			s.sellUnit = sellUnitOfWorkOrDefault(u, s.repo)
 		}
 	}
 }
@@ -382,12 +300,9 @@ func (s *Service) ensureDefaults() {
 
 	s.clock = clockOrDefault(s.clock)
 	s.placeValidator = placeValidatorOrDefault(s.placeValidator)
-	s.sellValidator = sellValidatorOrDefault(s.sellValidator)
 	s.marketGate = marketGateOrDefault(s.marketGate, s.markets, s.clock)
 	s.fees = feeCalculatorOrDefault(s.fees, s.config)
 	s.balances = balanceGuardOrDefault(s.balances, s.config)
 	s.ledger = betLedgerOrDefault(s.ledger, s.repo, s.users)
-	s.saleCalculator = saleCalculatorOrDefault(s.saleCalculator, s.config)
 	s.placeUnit = placeUnitOfWorkOrDefault(s.placeUnit, s.repo)
-	s.sellUnit = sellUnitOfWorkOrDefault(s.sellUnit, s.repo)
 }

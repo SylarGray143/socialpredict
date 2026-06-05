@@ -31,10 +31,6 @@ func (f *fakeBetsService) Place(ctx context.Context, req bets.PlaceRequest) (*be
 	return f.resp, nil
 }
 
-func (f *fakeBetsService) Sell(ctx context.Context, req bets.SellRequest) (*bets.SellResult, error) {
-	return nil, nil
-}
-
 type fakeUsersService struct {
 	user *dusers.User
 	err  error

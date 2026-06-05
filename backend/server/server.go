@@ -15,7 +15,6 @@ import (
 	"socialpredict/handlers/authhttp"
 	betshandlers "socialpredict/handlers/bets"
 	buybetshandlers "socialpredict/handlers/bets/buying"
-	sellbetshandlers "socialpredict/handlers/bets/selling"
 	"socialpredict/handlers/cms/homepage"
 	cmshomehttp "socialpredict/handlers/cms/homepage/http"
 	"socialpredict/handlers/cms/socialshare"
@@ -421,7 +420,6 @@ func registerApplicationRoutes(router *mux.Router, db *gorm.DB, configService co
 	// handle private user actions such as make a bet, sell positions, get user position
 	router.Handle("/v0/bet", privateActionMiddleware(buybetshandlers.PlaceBetHandler(container.GetBetsService(), container.GetUsersService()))).Methods("POST")
 	router.Handle("/v0/userposition/{marketId}", privateActionMiddleware(usershandlers.UserMarketPositionHandlerWithService(marketsService, usersService))).Methods("GET")
-	router.Handle("/v0/sell", privateActionMiddleware(sellbetshandlers.SellPositionHandler(container.GetBetsService(), container.GetUsersService()))).Methods("POST")
 
 	// admin stuff - apply security middleware
 	router.Handle("/v0/admin/createuser", securityMiddleware(http.HandlerFunc(adminhandlers.AddUserHandler(usersService, container.GetConfigService(), authService, requestSecurityService)))).Methods("POST")

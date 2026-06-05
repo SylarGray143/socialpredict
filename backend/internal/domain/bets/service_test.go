@@ -36,16 +36,6 @@ func (f fakePlaceUnit) PlaceBetTransaction(ctx context.Context, fn bets.PlaceTra
 	return fn(ctx, f.repo, f.users)
 }
 
-type fakeSellUnit struct {
-	repo    bets.Repository
-	markets bets.MarketService
-	users   bets.UserService
-}
-
-func (f fakeSellUnit) SellBetTransaction(ctx context.Context, fn bets.SellTransactionFunc) error {
-	return fn(ctx, f.repo, f.markets, f.users)
-}
-
 func newFakeRepo(opts ...func(*fakeRepo)) *fakeRepo {
 	repo := &fakeRepo{
 		writer: fakeBetWriter{
@@ -339,7 +329,6 @@ func newServiceFixture(now time.Time, opts ...serviceFixtureOption) (*serviceFix
 		opt(fixture)
 	}
 	placeUnit := fakePlaceUnit{repo: fixture.repo, users: fixture.users}
-	sellUnit := fakeSellUnit{repo: fixture.repo, markets: fixture.markets, users: fixture.users}
 	svc := bets.NewService(
 		fixture.repo,
 		fixture.markets,
@@ -347,7 +336,6 @@ func newServiceFixture(now time.Time, opts ...serviceFixtureOption) (*serviceFix
 		fixture.config,
 		fixture.clock,
 		bets.WithPlaceUnitOfWork(placeUnit),
-		bets.WithSellUnitOfWork(sellUnit),
 	)
 	return fixture, svc
 }
@@ -448,98 +436,5 @@ func TestServicePlace_MarketClosed(t *testing.T) {
 
 	if _, err := (&fakeMarkets{}).GetMarket(context.Background(), 1); !errors.Is(err, errUnexpectedServiceCall) {
 		t.Fatalf("expected zero-value markets to fail predictably, got %v", err)
-	}
-}
-
-func TestServiceSell_Succeeds(t *testing.T) {
-	now := serviceTestTime()
-	fixture, svc := newServiceFixture(
-		now,
-		withFixtureMaxDust(0),
-		withFixtureMarket(&dmarkets.Market{ID: 1, Status: "active", ResolutionDateTime: now.Add(24 * time.Hour)}),
-		withFixturePosition(&dmarkets.UserPosition{Username: "alice", MarketID: 1, YesSharesOwned: 10, NoSharesOwned: 0, Value: 100}),
-		withFixtureUser(&dusers.User{Username: "alice"}),
-	)
-
-	res, err := svc.Sell(context.Background(), bets.SellRequest{Username: "alice", MarketID: 1, Amount: 25, Outcome: "YES"})
-	if err != nil {
-		t.Fatalf("Sell returned error: %v", err)
-	}
-	if res.SharesSold != 2 || res.SaleValue != 20 || res.Dust != 5 {
-		t.Fatalf("unexpected sell result: %+v", res)
-	}
-	if !res.TransactionAt.Equal(now) {
-		t.Fatalf("expected transaction time %v, got %v", now, res.TransactionAt)
-	}
-	if fixture.repo.created == nil || fixture.repo.created.Amount != -2 || fixture.repo.created.Outcome != "YES" {
-		t.Fatalf("unexpected stored bet: %+v", fixture.repo.created)
-	}
-	if len(fixture.users.calls) != 1 || fixture.users.calls[0].transaction != dusers.TransactionSale || fixture.users.calls[0].amount != 20 {
-		t.Fatalf("unexpected user transaction: %+v", fixture.users.calls)
-	}
-
-	if got := (fixedClock{}).Now(); got != serviceTestTime() {
-		t.Fatalf("expected zero-value clock fallback, got %v", got)
-	}
-}
-
-func TestServiceSell_NoPosition(t *testing.T) {
-	now := serviceTestTime()
-	_, svc := newServiceFixture(
-		now,
-		withFixtureMarket(&dmarkets.Market{ID: 1, Status: "active", ResolutionDateTime: now.Add(24 * time.Hour)}),
-		withFixturePosition(&dmarkets.UserPosition{Username: "alice", MarketID: 1, YesSharesOwned: 0, NoSharesOwned: 0, Value: 0}),
-		withFixtureUser(&dusers.User{Username: "alice"}),
-	)
-
-	_, err := svc.Sell(context.Background(), bets.SellRequest{Username: "alice", MarketID: 1, Amount: 10, Outcome: "YES"})
-	if !errors.Is(err, bets.ErrNoPosition) {
-		t.Fatalf("expected ErrNoPosition, got %v", err)
-	}
-
-	if _, err := (&fakeMarkets{}).GetUserPositionInMarket(context.Background(), 1, "alice"); !errors.Is(err, errUnexpectedServiceCall) {
-		t.Fatalf("expected zero-value position lookup to fail predictably, got %v", err)
-	}
-}
-
-func TestServiceSell_DustCapExceeded(t *testing.T) {
-	now := serviceTestTime()
-	_, svc := newServiceFixture(
-		now,
-		withFixtureMaxDust(2),
-		withFixtureMarket(&dmarkets.Market{ID: 1, Status: "active", ResolutionDateTime: now.Add(24 * time.Hour)}),
-		withFixturePosition(&dmarkets.UserPosition{Username: "alice", MarketID: 1, YesSharesOwned: 10, Value: 100}),
-		withFixtureUser(&dusers.User{Username: "alice"}),
-	)
-
-	_, err := svc.Sell(context.Background(), bets.SellRequest{Username: "alice", MarketID: 1, Amount: 33, Outcome: "YES"})
-	var dustErr bets.ErrDustCapExceeded
-	if !errors.As(err, &dustErr) {
-		t.Fatalf("expected ErrDustCapExceeded, got %v", err)
-	}
-}
-
-func TestServiceSell_RequestTooSmall(t *testing.T) {
-	now := serviceTestTime()
-	_, svc := newServiceFixture(
-		now,
-		withFixtureMarket(&dmarkets.Market{ID: 1, Status: "active", ResolutionDateTime: now.Add(24 * time.Hour)}),
-		withFixturePosition(&dmarkets.UserPosition{
-			Username:       "alice",
-			MarketID:       1,
-			YesSharesOwned: 5,
-			Value:          50,
-		}),
-		withFixtureUser(&dusers.User{Username: "alice"}),
-	)
-
-	_, err := svc.Sell(context.Background(), bets.SellRequest{
-		Username: "alice",
-		MarketID: 1,
-		Amount:   5, // less than value per share (10)
-		Outcome:  "YES",
-	})
-	if !errors.Is(err, bets.ErrInvalidAmount) {
-		t.Fatalf("expected ErrInvalidAmount, got %v", err)
 	}
 }
