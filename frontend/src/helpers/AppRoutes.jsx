@@ -14,6 +14,8 @@ import Style from '../pages/style/Style';
 import AdminDashboard from '../pages/admin/AdminDashboard';
 import NotFound from '../pages/notfound/NotFound';
 import useFrontendConfig from '../hooks/useFrontendConfig';
+import Register from '../components/register/Register';
+import OAuthCallback from '../pages/auth/OAuthCallback';
 
 const AppRoutes = () => {
   const auth = useAuth();
@@ -31,6 +33,12 @@ const AppRoutes = () => {
       <Route exact path='/style' component={Style} />
 
       {/* Public Routes */}
+      <Route exact path='/register'>
+        <Register />
+      </Route>
+      <Route exact path='/auth/callback'>
+        <OAuthCallback />
+      </Route>
       <Route exact path='/about'>
         {isLoggedIn && mustChangePassword ? (
           <Redirect to='/changepassword' />

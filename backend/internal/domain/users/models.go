@@ -29,6 +29,8 @@ type User struct {
 	PersonalLink4             string
 	APIKey                    string
 	MustChangePassword        bool
+	AuthProvider              string
+	AuthID                    string
 	ModeratorStatus           ModeratorStatus
 	ModeratorSuspensionReason string
 	ModeratorSuspendedBy      string
@@ -163,6 +165,28 @@ type UserCreateRequest struct {
 	Email       string
 	Password    string
 	UserType    string
+}
+
+// SelfRegistrationRequest contains the user-supplied fields for self-registration.
+type SelfRegistrationRequest struct {
+	Username    string
+	DisplayName string
+	Email       string
+	Password    string
+}
+
+// SelfRegistrationResult contains the created user fields returned after self-registration.
+type SelfRegistrationResult struct {
+	Username string
+	UserType string
+}
+
+// OAuthUserRequest contains the OAuth provider profile used to find or create a user.
+type OAuthUserRequest struct {
+	Provider   string // e.g. "google"
+	ProviderID string // unique ID from the provider
+	Email      string
+	Name       string
 }
 
 // NewUser builds the default domain user entity for the request.

@@ -12,7 +12,7 @@ type User struct {
 	ID int64 `json:"id" gorm:"primary_key"`
 	PublicUser
 	PrivateUser
-	MustChangePassword bool `json:"mustChangePassword" gorm:"default:true"`
+	MustChangePassword bool `json:"mustChangePassword"`
 	ModeratorGovernance
 }
 
@@ -33,7 +33,11 @@ type PublicUser struct {
 type PrivateUser struct {
 	Email    string `json:"email" gorm:"unique;not null"`
 	APIKey   string `json:"apiKey,omitempty" gorm:"unique"`
-	Password string `json:"password,omitempty" gorm:"not null"`
+	Password string `json:"password,omitempty"`
+	// Tracks how they signed up (e.g., "local", "google", "github"). Default to "local".
+	AuthProvider string `json:"authProvider" gorm:"not null;default:'local';index"`
+	// Stores the unique unique identification string returned by the OAuth provider.
+	AuthID string `json:"authId,omitempty" gorm:"index"`
 }
 
 type ModeratorGovernance struct {

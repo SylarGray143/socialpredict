@@ -62,6 +62,11 @@ const LoginModal = ({ isOpen, onClose, onLogin, redirectAfterLogin }) => {
                     <div className="flex items-center justify-between">
                         <SiteButton type="submit">Login</SiteButton>
                     </div>
+                    <div className="mt-4 text-center">
+                        <a href="/register" onClick={(e) => { e.preventDefault(); onClose(); history.push('/register'); }} className="text-sm text-blue-300 hover:text-blue-100">
+                            Create an account
+                        </a>
+                    </div>
                 </form>
                 <button className="absolute top-0 right-0 mt-4 mr-4 text-gray-400 hover:text-white" onClick={onClose}>
                     ✕

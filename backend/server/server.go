@@ -317,9 +317,16 @@ func registerApplicationRoutes(router *mux.Router, db *gorm.DB, configService co
 	router.HandleFunc("/v0/home", handlers.HomeHandler).Methods("GET")
 	router.Handle("/v0/login", loginSecurityMiddleware(authsvc.LoginHandler(usersRepo, requestSecurityService, securityConfig.JWTSigningKey))).Methods("POST")
 
-	// application setup information
+	// 1. Native Email/Password
+	router.Handle("/v0/register", loginSecurityMiddleware(authhttp.RegisterHandlerWithConfig(usersService, container.GetConfigService(), requestSecurityService))).Methods("POST")
+
+	// OAuth Login & Callback
+	router.Handle("/v0/auth/login/{provider}", loginSecurityMiddleware(authhttp.OAuthLoginHandler(container.GetConfigService()))).Methods("GET")
+	router.Handle("/v0/auth/callback/{provider}", loginSecurityMiddleware(authhttp.OAuthCallbackHandlerWithConfig(usersService, container.GetConfigService(), securityConfig.JWTSigningKey))).Methods("GET")
+
+	// Platform Configuration Endpoints
 	router.Handle("/v0/setup", securityMiddleware(http.HandlerFunc(setuphandlers.GetSetupHandler(container.GetConfigService())))).Methods("GET")
-	router.Handle("/v0/setup/frontend", securityMiddleware(http.HandlerFunc(setuphandlers.GetFrontendSetupHandler(container.GetConfigService())))).Methods("GET")
+	router.Handle("/v0/setup/frontend", securityMiddleware(http.HandlerFunc(setuphandlers.GetFrontendSetupHandler(container.GetConfigService(), securityConfig.OAuth.Google.Enabled)))).Methods("GET")
 	registerApplicationReportingRoutes(router, configService, analyticsService, analyticsService, securityMiddleware)
 
 	// CMS routes and services

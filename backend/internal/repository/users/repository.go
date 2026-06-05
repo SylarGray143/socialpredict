@@ -389,9 +389,11 @@ func (r *GormRepository) domainToModel(user *dusers.User) models.User {
 			PersonalLink4:         user.PersonalLink4,
 		},
 		PrivateUser: models.PrivateUser{
-			Email:    user.Email,
-			APIKey:   user.APIKey,
-			Password: user.PasswordHash,
+			Email:        user.Email,
+			APIKey:       user.APIKey,
+			Password:     user.PasswordHash,
+			AuthProvider: user.AuthProvider,
+			AuthID:       user.AuthID,
 		},
 		ModeratorGovernance: models.ModeratorGovernance{
 			ModeratorStatus:           string(dusers.NormalizeModeratorStatus(user.UserType, string(user.ModeratorStatus))),
@@ -422,6 +424,8 @@ func (r *GormRepository) modelToDomain(dbUser *models.User) *dusers.User {
 		PersonalLink4:             dbUser.PersonalLink4,
 		APIKey:                    dbUser.APIKey,
 		MustChangePassword:        dbUser.MustChangePassword,
+		AuthProvider:              dbUser.AuthProvider,
+		AuthID:                    dbUser.AuthID,
 		ModeratorStatus:           dusers.ModeratorStatus(dbUser.ModeratorStatus),
 		ModeratorSuspensionReason: dbUser.ModeratorSuspensionReason,
 		ModeratorSuspendedBy:      dbUser.ModeratorSuspendedBy,
@@ -431,6 +435,36 @@ func (r *GormRepository) modelToDomain(dbUser *models.User) *dusers.User {
 	}
 	user.NormalizeRoleState()
 	return user
+}
+
+// FindByOAuthProvider returns the user associated with the given OAuth provider and provider-specific ID.
+func (r *GormRepository) FindByOAuthProvider(ctx context.Context, provider, authID string) (*dusers.User, error) {
+	var dbUser models.User
+	err := r.db.WithContext(ctx).
+		Where("auth_provider = ? AND auth_id = ?", provider, authID).
+		First(&dbUser).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, dusers.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return r.modelToDomain(&dbUser), nil
+}
+
+// FindByEmail returns the user with the specified email address.
+func (r *GormRepository) FindByEmail(ctx context.Context, email string) (*dusers.User, error) {
+	var dbUser models.User
+	err := r.db.WithContext(ctx).
+		Where("email = ?", email).
+		First(&dbUser).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, dusers.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return r.modelToDomain(&dbUser), nil
 }
 
 func (r *GormRepository) domainAuditToModel(record *dusers.ModeratorAuditRecord) models.ModeratorRoleAudit {

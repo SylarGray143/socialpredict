@@ -31,6 +31,20 @@ type SecurityConfig struct {
 	Headers           security.SecurityHeaders
 	Share             ShareConfig
 	RateLimit         security.RateLimitConfig
+	OAuth             OAuthConfig
+}
+
+// OAuthConfig defines settings for external OAuth providers.
+type OAuthConfig struct {
+	Google          OAuthProviderConfig
+	CallbackBaseURL string
+}
+
+// OAuthProviderConfig defines settings for a specific OAuth provider.
+type OAuthProviderConfig struct {
+	ClientID     string
+	ClientSecret string
+	Enabled      bool
 }
 
 // ShareConfig describes public market sharing metadata owned by runtime config.
@@ -76,6 +90,14 @@ func LoadSecurityConfigFromEnv() (SecurityConfig, error) {
 			SiteName:        getRuntimeStringEnv("SHARE_SITE_NAME", "SocialPredict"),
 		},
 		RateLimit: rateLimit,
+		OAuth: OAuthConfig{
+			Google: OAuthProviderConfig{
+				ClientID:     strings.TrimSpace(os.Getenv("OAUTH_GOOGLE_CLIENT_ID")),
+				ClientSecret: strings.TrimSpace(os.Getenv("OAUTH_GOOGLE_CLIENT_SECRET")),
+				Enabled:      strings.TrimSpace(os.Getenv("OAUTH_GOOGLE_CLIENT_ID")) != "" && strings.TrimSpace(os.Getenv("OAUTH_GOOGLE_CLIENT_SECRET")) != "",
+			},
+			CallbackBaseURL: strings.TrimSpace(os.Getenv("OAUTH_CALLBACK_BASE_URL")),
+		},
 	}, nil
 }
 

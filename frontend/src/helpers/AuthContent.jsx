@@ -105,6 +105,19 @@ const AuthProvider = ({ children }) => {
     };
 
 
+    const loginFromToken = (token, username, usertype, mustChangePassword) => {
+        const authData = { token, username, usertype, mustChangePassword };
+        authStorage.saveLogin(authData);
+        setAuthState({
+            isLoggedIn: true,
+            token,
+            username,
+            usertype,
+            changePasswordNeeded: mustChangePassword,
+        });
+        return { success: true, mustChangePassword };
+    };
+
     const logout = () => {
         authStorage.clear();
         setAuthState({
@@ -117,7 +130,7 @@ const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ ...authState, login, logout }}>
+        <AuthContext.Provider value={{ ...authState, login, loginFromToken, logout }}>
             {children}
         </AuthContext.Provider>
     );

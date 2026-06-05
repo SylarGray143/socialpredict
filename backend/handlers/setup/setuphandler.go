@@ -32,11 +32,16 @@ type frontendGameResponse struct {
 }
 
 type frontendConfigResponse struct {
-	Charts frontendChartsResponse `json:"charts"`
-	Game   frontendGameResponse   `json:"game"`
+	Charts         frontendChartsResponse         `json:"charts"`
+	Game           frontendGameResponse           `json:"game"`
+	OAuthProviders frontendOAuthProvidersResponse `json:"oauthProviders"`
 }
 
-func GetFrontendSetupHandler(configService configsvc.Service) func(w http.ResponseWriter, r *http.Request) {
+type frontendOAuthProvidersResponse struct {
+	Google bool `json:"google"`
+}
+
+func GetFrontendSetupHandler(configService configsvc.Service, oauthGoogleEnabled bool) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if configService == nil {
 			_ = handlers.WriteFailure(w, http.StatusInternalServerError, handlers.ReasonInternalError)
@@ -49,6 +54,9 @@ func GetFrontendSetupHandler(configService configsvc.Service) func(w http.Respon
 			},
 			Game: frontendGameResponse{
 				Mode: configService.Game().Mode,
+			},
+			OAuthProviders: frontendOAuthProvidersResponse{
+				Google: oauthGoogleEnabled,
 			},
 		}
 

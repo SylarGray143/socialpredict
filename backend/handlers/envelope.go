@@ -65,8 +65,9 @@ type SuccessEnvelope[T any] struct {
 }
 
 type FailureEnvelope struct {
-	OK     bool   `json:"ok"`
-	Reason string `json:"reason"`
+	OK      bool   `json:"ok"`
+	Reason  string `json:"reason"`
+	Message string `json:"message,omitempty"`
 }
 
 func WriteResult[T any](w http.ResponseWriter, statusCode int, result T) error {
@@ -80,6 +81,14 @@ func WriteFailure(w http.ResponseWriter, statusCode int, reason FailureReason) e
 	return writeJSON(w, statusCode, FailureEnvelope{
 		OK:     false,
 		Reason: string(reason),
+	})
+}
+
+func WriteFailureWithMessage(w http.ResponseWriter, statusCode int, reason FailureReason, message string) error {
+	return writeJSON(w, statusCode, FailureEnvelope{
+		OK:      false,
+		Reason:  string(reason),
+		Message: message,
 	})
 }
 

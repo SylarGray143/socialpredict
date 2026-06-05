@@ -93,7 +93,7 @@ func TestGetFrontendSetupHandler(t *testing.T) {
 	config.Frontend.Charts.SigFigs = 1
 	config.Game.Mode = configsvc.GameModeModerator
 
-	handler := http.HandlerFunc(GetFrontendSetupHandler(configsvc.NewStaticService(config)))
+	handler := http.HandlerFunc(GetFrontendSetupHandler(configsvc.NewStaticService(config), false))
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {
@@ -124,7 +124,7 @@ func TestGetFrontendSetupHandlerUsesChartSigFigsAccessor(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/setup/frontend", nil)
 	rr := httptest.NewRecorder()
 
-	handler := http.HandlerFunc(GetFrontendSetupHandler(chartSigFigsOnlyConfigService{chartSigFigs: 9}))
+	handler := http.HandlerFunc(GetFrontendSetupHandler(chartSigFigsOnlyConfigService{chartSigFigs: 9}, false))
 	handler.ServeHTTP(rr, req)
 
 	if rr.Code != http.StatusOK {

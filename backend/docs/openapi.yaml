@@ -368,6 +368,126 @@ paths:
               schema:
                 $ref: '#/components/schemas/ReasonResponse'
 
+  /v0/register:
+    post:
+      tags: [Auth]
+      operationId: registerUser
+      summary: Register user
+      description: >
+        Registers a new user with a username, email, and password. Returns a
+        SuccessEnvelope on success.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User created successfully.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegisterEnvelopeResponse'
+        '400':
+          description: Invalid request payload or validation failure.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+        '405':
+          description: Method not allowed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+        '409':
+          description: Username or email already exists.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+        '429':
+          description: Rate limit exceeded by shared middleware.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+
+  /v0/auth/login/{provider}:
+    get:
+      tags: [Auth]
+      operationId: oauthLogin
+      summary: OAuth login redirect
+      description: >
+        Redirects to the OAuth provider's authorization URL. Sets a state cookie.
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [google]
+      responses:
+        '307':
+          description: Temporary redirect to the OAuth provider.
+        '400':
+          description: Invalid provider.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+        '404':
+          description: Provider configuration not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+        '500':
+          description: Internal server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+
+  /v0/auth/callback/{provider}:
+    get:
+      tags: [Auth]
+      operationId: oauthCallback
+      summary: OAuth callback
+      description: >
+        Processes the OAuth callback from the provider. Exchanges code for token,
+        creates or updates the user, and redirects to the frontend with an auth
+        token.
+      parameters:
+        - in: path
+          name: provider
+          required: true
+          schema:
+            type: string
+            enum: [google]
+      responses:
+        '307':
+          description: Temporary redirect to the frontend application.
+        '400':
+          description: Invalid request, state mismatch, or authorization denied.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+        '500':
+          description: Internal server error during token exchange or user creation.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReasonResponse'
+
   /v0/home:
     get:
       tags: [Config]
@@ -4469,3 +4589,44 @@ components:
         version:
           type: integer
           format: int64
+
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 30
+        displayname:
+          type: string
+          minLength: 1
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 1
+
+    RegisterResponse:
+      type: object
+      required: [username, usertype]
+      properties:
+        username:
+          type: string
+        usertype:
+          type: string
+
+    RegisterEnvelopeResponse:
+      type: object
+      required: [ok, result]
+      properties:
+        ok:
+          type: boolean
+          enum: [true]
+        result:
+          $ref: '#/components/schemas/RegisterResponse'

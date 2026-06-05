@@ -46,4 +46,8 @@ var (
 	ErrInvalidTransactionType UserError = newDomainError("invalid transaction type")
 	// ErrInvalidModeratorState indicates that a moderator-only role/status transition is invalid.
 	ErrInvalidModeratorState UserError = newDomainError("invalid moderator state")
+	// ErrEmailAlreadyExists indicates that the email address is already in use.
+	ErrEmailAlreadyExists UserError = newDomainError("email already exists")
+	// ErrInvalidEmail indicates that the supplied email address is not valid.
+	ErrInvalidEmail UserError = newDomainError("invalid email address")
 )

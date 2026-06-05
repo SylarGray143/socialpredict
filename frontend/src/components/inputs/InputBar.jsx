@@ -91,4 +91,19 @@ const LockInput = ({ value, onChange }) => {
     );
 };
 
-export { RegularInput, NumberInput, SuccessInput, ErrorInput, PersonInput, LockInput };
+const EmailInput = ({ value, onChange }) => {
+    return (
+    <div className="flex items-center border-2 border-blue-500 bg-transparent rounded-md">
+        <span className="h-5 w-5 text-blue-500 ml-2">✉️</span>
+        <input
+        type="email"
+        placeholder="Email Address"
+        value={value}
+        onChange={onChange}
+        className="flex-1 px-4 py-2 rounded-md text-white bg-transparent focus:outline-none"
+        />
+    </div>
+    );
+};
+
+export { RegularInput, NumberInput, SuccessInput, ErrorInput, PersonInput, LockInput, EmailInput };

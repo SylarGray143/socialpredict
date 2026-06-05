@@ -78,6 +78,9 @@ const Sidebar = () => {
           <li>
             <LoginModalButton />
           </li>
+          <SidebarLink to='/register' icon={CreateSVG}>
+            Register
+          </SidebarLink>
           <SidebarLink to='/markets' icon={MarketsSVG}>
             Markets
           </SidebarLink>
@@ -167,7 +170,7 @@ const Sidebar = () => {
         } md:relative md:translate-x-0`}
       >
         <div className='flex items-center justify-between p-3 border-b border-gray-700'>
-          <h2 className='text-lg font-bold'>SocialPredict</h2>
+          <h2 className='text-lg font-bold'>ThorpMarkets</h2>
           <button
             onClick={toggleSidebar}
             className='md:hidden'
@@ -185,15 +188,24 @@ const Sidebar = () => {
           <ul className='space-y-1'>{renderLinks()}</ul>
         </nav>
         <footer className='border-t border-gray-700 p-2'>
-          <p className='text-xs text-center'>📈 Built with SocialPredict</p>
-          <p className='text-xs text-center'>
+                 <p className='text-xs text-left'>
             <a
-              href='https://github.com/openpredictionmarkets/socialpredict'
+              href='https://kick.com/ThorpTube'
               target='_blank'
               rel='noopener noreferrer'
               className='text-blue-400 hover:text-blue-300'
             >
-              ⭐ Star Us on Github!
+              Follow ThorpTube on Kick!
+            </a>
+          </p>
+          <p className='text-xs text-left'>
+            <a
+              href='https://www.youtube.com/@Thorp-Tube'
+              target='_blank'
+              rel='noopener noreferrer'
+              className='text-blue-400 hover:text-blue-300'
+            >
+              Follow ThorpTube on Youtube!
             </a>
           </p>
         </footer>
